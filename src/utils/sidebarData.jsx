@@ -4,6 +4,26 @@ export const sidebarData = [
     icon: "LayoutDashboard",
     link: "/dashboard"
   },
+    {
+    title: "Sales",
+    icon: "ShoppingCart",
+    link: "/sales",
+    subItems: [
+      { title: "Point of Sale (POS)", link: "/sales/pos" },
+      { title: "All Sales", link: "/sales/all" },
+      { title: "Sales Returns", link: "/sales/returns" }
+    ]
+  },
+  {
+    title: "Customers",
+    icon: "Users",
+    link: "/customers",
+    subItems: [
+      { title: "All Customers", link: "/customers/all" },
+      { title: "Add Customer", link: "/customers/add" },
+      { title: "Purchase History", link: "/customers/purchase-history" }
+    ]
+  },
   {
     title: "Inventory",
     icon: "Package",
@@ -38,16 +58,7 @@ export const sidebarData = [
       { title: "Suppliers", link: "/purchases/suppliers" }
     ]
   },
-  {
-    title: "Sales",
-    icon: "ShoppingCart",
-    link: "/sales",
-    subItems: [
-      { title: "Point of Sale (POS)", link: "/sales/pos" },
-      { title: "All Sales", link: "/sales/all" },
-      { title: "Sales Returns", link: "/sales/returns" }
-    ]
-  },
+
   {
     title: "Invoices",
     icon: "FileText",
@@ -58,16 +69,7 @@ export const sidebarData = [
       { title: "Invoice Settings", link: "/invoices/settings" }
     ]
   },
-  {
-    title: "Customers",
-    icon: "Users",
-    link: "/customers",
-    subItems: [
-      { title: "All Customers", link: "/customers/all" },
-      { title: "Add Customer", link: "/customers/add" },
-      { title: "Purchase History", link: "/customers/purchase-history" }
-    ]
-  },
+  
   {
     title: "Reports",
     icon: "BarChart3",
