@@ -103,8 +103,8 @@ export const sidebarData = [
     subItems: [
       { title: "All Users", link: "/users/all" },
       { title: "Add User", link: "/users/add" },
-      { title: "Roles & Permissions", link: "/users/roles" },
-      { title: "Audit Trail", link: "/users/audit" }
+      { title: "Roles & Permissions", link: "/users/permissions" },
+      { title: "Audit Trail", link: "/users/audit-trail" }
     ]
   },
   {
