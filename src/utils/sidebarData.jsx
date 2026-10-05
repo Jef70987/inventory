@@ -20,8 +20,7 @@ export const sidebarData = [
     link: "/customers",
     subItems: [
       { title: "All Customers", link: "/customers/all" },
-      { title: "Add Customer", link: "/customers/add" },
-      { title: "Purchase History", link: "/customers/purchase-history" }
+      { title: "Add Customer", link: "/customers/add" }
     ]
   },
   {
@@ -34,7 +33,8 @@ export const sidebarData = [
       { title: "Bulk Import", link: "/inventory/bulk-import" },
       { title: "Stock Adjustment", link: "/inventory/stock-adjustment" },
       { title: "Low Stock", link: "/inventory/low-stock" },
-      { title: "Out of Stock", link: "/inventory/out-of-stock" }
+      { title: "Out of Stock", link: "/inventory/out-of-stock" },
+      { title: "Lookups", link: "/inventory/lookups" }
     ]
   },
   {
@@ -43,7 +43,6 @@ export const sidebarData = [
     link: "/warehouses",
     subItems: [
       { title: "All Warehouses", link: "/warehouses/all" },
-      { title: "Add Warehouse", link: "/warehouses/add" },
       { title: "Stock Transfers", link: "/warehouses/transfers" }
     ]
   },
@@ -122,6 +121,6 @@ export const sidebarData = [
   {
     title: "Logout",
     icon: "LogOut",
-    link: "/logout"
+    link: "/auth/logout"
   }
 ];

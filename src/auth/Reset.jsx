@@ -1,11 +1,17 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Lock, Eye, EyeOff, Check } from "lucide-react";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
+import { invoke } from "@tauri-apps/api/core";
+import { Lock, Eye, EyeOff, Check, KeyRound, Loader2 } from "lucide-react";
 
 const Reset = () => {
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const identifier = params.get("identifier") || "";
+
+  const [otp, setOtp] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -14,6 +20,10 @@ const Reset = () => {
   const submit = async (e) => {
     e.preventDefault();
     setError("");
+    if (!otp.trim() || otp.trim().length !== 6) {
+      setError("Please enter the 6-digit code.");
+      return;
+    }
     if (!password || password.length < 8) {
       setError("Password must be at least 8 characters.");
       return;
@@ -24,9 +34,15 @@ const Reset = () => {
     }
     setLoading(true);
     try {
+      await invoke("verify_reset_otp", {
+        identifier: identifier.toLowerCase(),
+        otp: otp.trim(),
+        newPassword: password,
+      });
       setDone(true);
-    } catch (err) {
-      setError("Could not reset password.");
+      setTimeout(() => navigate("/auth/login", { replace: true }), 1500);
+    } catch (e) {
+      setError(typeof e === "string" ? e : "Could not reset password.");
     } finally {
       setLoading(false);
     }
@@ -51,38 +67,48 @@ const Reset = () => {
                 <Check size={28} color="white" />
               </div>
               <p className="text-sm text-gray-700 font-medium">
-                Your password has been updated.
+                Password reset successfully. Redirecting to login…
               </p>
-              <Link
-                to="/auth/login"
-                className="inline-block bg-blue-950 text-white px-6 py-2 text-xs font-bold uppercase tracking-wider hover:bg-orange-500 transition-colors border-2 border-blue-950"
-              >
-                Go to Login
-              </Link>
             </div>
           ) : (
             <form className="space-y-4" onSubmit={submit}>
+              {!identifier && (
+                <p className="text-xs text-red-600 font-bold text-center">
+                  Missing identifier. <Link to="/auth/forgot" className="underline">Start again</Link>
+                </p>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-blue-950 uppercase tracking-wider mb-2">
+                  6-Digit Code
+                </label>
+                <div className="flex items-center border-2 border-blue-950/10 px-3 py-2 focus-within:border-orange-500 bg-gray-50">
+                  <KeyRound size={18} className="text-blue-950 mr-2" />
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                    className="w-full text-lg font-bold text-blue-950 outline-none bg-transparent tracking-widest text-center"
+                    placeholder="000000"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-blue-950 uppercase tracking-wider mb-2">
                   New Password
                 </label>
                 <div className="flex items-center border-2 border-blue-950/10 px-3 py-2 focus-within:border-orange-500 bg-gray-50">
                   <Lock size={18} className="text-blue-950 mr-2" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
+                  <input type={showPass ? "text" : "password"} value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="new-password"
                     className="w-full text-sm font-medium text-blue-950 outline-none bg-transparent"
-                    placeholder="At least 8 characters"
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="text-blue-950 hover:text-orange-500 ml-2"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    placeholder="At least 8 characters" />
+                  <button type="button" onClick={() => setShowPass(!showPass)}
+                    className="text-blue-950 hover:text-orange-500 ml-2">
+                    {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>
@@ -93,36 +119,28 @@ const Reset = () => {
                 </label>
                 <div className="flex items-center border-2 border-blue-950/10 px-3 py-2 focus-within:border-orange-500 bg-gray-50">
                   <Lock size={18} className="text-blue-950 mr-2" />
-                  <input
-                    type={showConfirm ? "text" : "password"}
-                    value={confirm}
+                  <input type={showConfirm ? "text" : "password"} value={confirm}
                     onChange={(e) => setConfirm(e.target.value)}
-                    autoComplete="new-password"
                     className="w-full text-sm font-medium text-blue-950 outline-none bg-transparent"
-                    placeholder="Repeat password"
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="text-blue-950 hover:text-orange-500 ml-2"
-                    onClick={() => setShowConfirm(!showConfirm)}
-                  >
+                    placeholder="Repeat password" />
+                  <button type="button" onClick={() => setShowConfirm(!showConfirm)}
+                    className="text-blue-950 hover:text-orange-500 ml-2">
                     {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>
 
-              {error && (
-                <p className="text-xs text-red-600 font-bold">{error}</p>
-              )}
+              {error && <p className="text-xs text-red-600 font-bold">{error}</p>}
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-orange-500 text-white py-3 font-bold text-sm uppercase tracking-wider hover:bg-orange-600 transition-colors border-2 border-orange-500 disabled:opacity-60"
-              >
-                {loading ? "Saving…" : "Set New Password"}
+              <button type="submit" disabled={loading}
+                className="w-full bg-orange-500 text-white py-3 font-bold text-sm uppercase tracking-wider hover:bg-orange-600 transition-colors border-2 border-orange-500 disabled:opacity-60 flex items-center justify-center gap-2">
+                {loading ? <><Loader2 size={16} className="animate-spin" /> Saving…</> : "Set New Password"}
               </button>
+
+              <Link to="/auth/login"
+                className="block text-center text-xs text-blue-950 hover:text-orange-500 font-bold uppercase tracking-wider">
+                Back to Login
+              </Link>
             </form>
           )}
         </div>

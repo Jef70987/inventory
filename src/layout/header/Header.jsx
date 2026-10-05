@@ -27,7 +27,7 @@ const Header = ({ onToggleSidebar }) => {
           </div>
           <div className="hidden md:block">
             <p className="text-sm font-bold text-blue-950 leading-tight">Admin User</p>
-            <p class="text-xs text-blue-950/70 font-medium">Administrator</p>
+            <p className="text-xs text-blue-950/70 font-medium">Administrator</p>
           </div>
         </div>
       </div>
