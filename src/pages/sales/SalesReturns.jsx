@@ -32,7 +32,7 @@ const SalesReturns = () => {
     try {
       const [r, s] = await Promise.all([
         invoke("list_returns"),
-        invoke("list_sales", { limit: 200 }),
+        invoke("list_sales_for_return", { limit: 200 }),
       ]);
       setReturns(r);
       setSales(s);
@@ -212,17 +212,17 @@ const SalesReturns = () => {
             </tr>
           </thead>
           <tbody>
-            {loading && (
+            {/* {loading && (
               <tr><td colSpan="8" className="py-8 text-center text-gray-500 font-medium">
                 <Loader2 size={20} className="animate-spin inline mr-2" /> Loading…
               </td></tr>
-            )}
+            )} */}
             {!loading && filtered.length === 0 && (
               <tr><td colSpan="8" className="py-8 text-center text-gray-500 font-medium">
                 No returns yet.
               </td></tr>
             )}
-            {!loading && filtered.map((r) => (
+            {loading && filtered.map((r) => (
               <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                 <td className="py-3 px-4 font-bold text-blue-950">{r.return_number}</td>
                 <td className="py-3 px-4 text-gray-600 font-medium">{r.receipt_no || "—"}</td>
@@ -275,9 +275,9 @@ const SalesReturns = () => {
                     Select Original Sale
                   </label>
                   <div className="max-h-72 overflow-y-auto border-2 border-blue-950/10">
-                    {sales.filter(s => s.status === "completed").length === 0 ? (
-                      <p className="p-4 text-center text-gray-500 text-xs font-medium">No eligible sales to return.</p>
-                    ) : sales.filter(s => s.status === "completed").map(s => (
+                    {sales.length === 0 ? (
+                      <p className="p-4 text-center text-gray-500 text-xs font-medium">No sales available to return.</p>
+                    ) : sales.map(s => (
                       <button key={s.id} type="button" onClick={() => pickSale(s)}
                         className="w-full text-left p-3 border-b border-gray-100 hover:bg-gray-50 flex items-center justify-between">
                         <div>

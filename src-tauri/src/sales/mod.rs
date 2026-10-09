@@ -595,3 +595,32 @@ pub async fn reject_return(
         .bind(&return_id).execute(&*pool).await.map_err(|e| e.to_string())?;
     Ok(())
 }
+
+
+#[tauri::command]
+pub async fn list_sales_for_return(
+    pool: tauri::State<'_, SqlitePool>,
+    limit: Option<i64>,
+) -> Result<Vec<serde_json::Value>, String> {
+    let lim = limit.unwrap_or(200);
+    let rows = sqlx::query(
+        "SELECT s.id, s.receipt_no, s.total, s.status, s.sold_at,
+                c.name AS customer_name,
+                (SELECT COUNT(*) FROM sale_items WHERE sale_id = s.id) AS items_count
+         FROM sales s
+         LEFT JOIN customers c ON c.id = s.customer_id
+         WHERE s.status = 'completed'
+         ORDER BY s.sold_at DESC
+         LIMIT ?"
+    ).bind(lim).fetch_all(&*pool).await.map_err(|e| e.to_string())?;
+
+    Ok(rows.into_iter().map(|r| serde_json::json!({
+        "id": r.get::<String, _>("id"),
+        "receipt_no": r.get::<String, _>("receipt_no"),
+        "total": r.get::<f64, _>("total"),
+        "status": r.get::<String, _>("status"),
+        "sold_at": r.get::<String, _>("sold_at"),
+        "customer_name": r.get::<Option<String>, _>("customer_name"),
+        "items_count": r.get::<i64, _>("items_count"),
+    })).collect())
+}

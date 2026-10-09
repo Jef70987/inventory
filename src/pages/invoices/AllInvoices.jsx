@@ -1,415 +1,199 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { invoke } from "@tauri-apps/api/core";
 import {
-  FileText,
-  Search,
-  Filter,
-  Eye,
-  Printer,
-  Download,
-  CheckCircle,
-  Clock,
-  XCircle,
-  RefreshCw,
-  Plus,
-  DollarSign,
-  Users,
-  Calendar,
-  AlertCircle,
-  X,
-  MoreVertical
+  FileText, Search, Eye, Trash2, CheckCircle, Clock, AlertCircle,
+  DollarSign, Plus, Loader2, X, Save
 } from "lucide-react";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement
-} from 'chart.js';
-import { Bar, Doughnut } from 'react-chartjs-2';
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement
-);
+import ConfirmModal from "../../components/ConfirmModal";
 
 const AllInvoices = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [showModal, setShowModal] = useState(false);
-  const [modalMessage, setModalMessage] = useState("");
-  const [modalType, setModalType] = useState("");
-  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [invoices, setInvoices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [detail, setDetail] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [payModal, setPayModal] = useState(null);
+  const [payAmount, setPayAmount] = useState("");
+  const [payMethod, setPayMethod] = useState("cash");
+  const [payRef, setPayRef] = useState("");
+  const [paying, setPaying] = useState(false);
 
-  const invoices = [
-    { id: "INV-2026-001", customer: "John Doe", items: 3, total: 245.00, status: "Paid", date: "2026-08-05", dueDate: "2026-08-19", paymentMethod: "Cash" },
-    { id: "INV-2026-002", customer: "Jane Smith", items: 2, total: 132.50, status: "Unpaid", date: "2026-08-05", dueDate: "2026-08-19", paymentMethod: "Card" },
-    { id: "INV-2026-003", customer: "Robert Johnson", items: 5, total: 378.00, status: "Paid", date: "2026-08-04", dueDate: "2026-08-18", paymentMethod: "Mobile" },
-    { id: "INV-2026-004", customer: "Mary Williams", items: 1, total: 56.00, status: "Overdue", date: "2026-07-25", dueDate: "2026-08-08", paymentMethod: "Cash" },
-    { id: "INV-2026-005", customer: "Michael Brown", items: 2, total: 92.50, status: "Pending", date: "2026-08-03", dueDate: "2026-08-17", paymentMethod: "Card" },
-    { id: "INV-2026-006", customer: "Sarah Davis", items: 4, total: 189.00, status: "Paid", date: "2026-08-03", dueDate: "2026-08-17", paymentMethod: "Mobile" },
-    { id: "INV-2026-007", customer: "David Wilson", items: 3, total: 215.00, status: "Unpaid", date: "2026-08-02", dueDate: "2026-08-16", paymentMethod: "Bank" }
-  ];
-
-  // Chart Data
-  const invoiceStatusData = {
-    labels: ['Paid', 'Unpaid', 'Pending', 'Overdue'],
-    datasets: [
-      {
-        data: [3, 2, 1, 1],
-        backgroundColor: ['#166534', '#f97316', '#1e3a5f', '#991b1b'],
-        borderColor: '#ffffff',
-        borderWidth: 2
-      }
-    ]
-  };
-
-  const invoiceRevenueData = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
-    datasets: [
-      {
-        label: 'Invoiced Amount',
-        data: [18500, 22000, 19500, 28000, 32000, 29000, 35000],
-        backgroundColor: '#1e3a5f',
-        borderRadius: 0
-      },
-      {
-        label: 'Paid Amount',
-        data: [15000, 18000, 16500, 24000, 28000, 25000, 31000],
-        backgroundColor: '#166534',
-        borderRadius: 0
-      }
-    ]
-  };
-
-  const doughnutOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'bottom',
-        labels: {
-          usePointStyle: true,
-          padding: 15,
-          font: { weight: 'bold', size: 10 }
-        }
-      }
-    },
-    cutout: '60%'
-  };
-
-  const barOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'top',
-        labels: {
-          usePointStyle: true,
-          padding: 15,
-          font: { weight: 'bold', size: 10 }
-        }
-      }
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        grid: { color: 'rgba(0,0,0,0.05)' }
-      },
-      x: {
-        grid: { display: false }
-      }
+  const load = async () => {
+    setLoading(true);
+    try {
+      const data = await invoke("list_invoices", { search: searchTerm || null });
+      setInvoices(data);
+    } catch (e) {
+      setError(typeof e === "string" ? e : "Could not load invoices.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getStatusColor = (status) => {
-    const colors = {
-      'Paid': 'bg-green-800 text-white',
-      'Unpaid': 'bg-orange-600 text-white',
-      'Pending': 'bg-blue-950 text-white',
-      'Overdue': 'bg-red-800 text-white'
-    };
-    return colors[status] || 'bg-gray-700 text-white';
-  };
+  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    const t = setTimeout(() => load(), 300);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
 
-  const getStatusIcon = (status) => {
-    switch(status) {
-      case 'Paid': return <CheckCircle size={14} />;
-      case 'Unpaid': return <Clock size={14} />;
-      case 'Pending': return <RefreshCw size={14} />;
-      case 'Overdue': return <AlertCircle size={14} />;
-      default: return null;
+  const openDetail = async (inv) => {
+    try {
+      const full = await invoke("get_invoice", { invoiceId: inv.id });
+      setDetail(full);
+    } catch (e) {
+      setError(typeof e === "string" ? e : "Could not load invoice.");
     }
   };
 
-  const showCustomModal = (message, type, data = null) => {
-    setModalMessage(message);
-    setModalType(type);
-    setSelectedInvoice(data);
-    setShowModal(true);
+  const deleteNow = async () => {
+    if (!confirmDelete) return;
+    try {
+      await invoke("delete_invoice", { invoiceId: confirmDelete.id });
+      setConfirmDelete(null);
+      await load();
+    } catch (e) {
+      setError(typeof e === "string" ? e : "Could not delete invoice.");
+      setConfirmDelete(null);
+    }
   };
 
-  const closeModal = () => {
-    setShowModal(false);
-    setModalMessage("");
-    setModalType("");
-    setSelectedInvoice(null);
+  const openPay = (inv) => {
+    setPayModal(inv);
+    setPayAmount(inv.balance.toFixed(2));
+    setPayMethod("cash");
+    setPayRef("");
+  };
+
+  const submitPay = async () => {
+    const amt = Number(payAmount);
+    if (isNaN(amt) || amt <= 0) { setError("Enter a valid amount."); return; }
+    setPaying(true);
+    try {
+      await invoke("add_invoice_payment", {
+        invoiceId: payModal.id,
+        amount: amt,
+        method: payMethod,
+        reference: payRef.trim() || null,
+      });
+      setPayModal(null);
+      await load();
+      if (detail) await openDetail(detail);
+    } catch (e) {
+      setError(typeof e === "string" ? e : "Could not add payment.");
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  const getStatusColor = (s) => ({
+    paid: "bg-green-800 text-white",
+    unpaid: "bg-orange-600 text-white",
+    pending: "bg-blue-950 text-white",
+    overdue: "bg-red-800 text-white",
+    void: "bg-gray-700 text-white",
+  }[s] || "bg-gray-700 text-white");
+
+  const getStatusIcon = (s) => {
+    if (s === "paid") return <CheckCircle size={12} />;
+    if (s === "unpaid" || s === "pending") return <Clock size={12} />;
+    if (s === "overdue") return <AlertCircle size={12} />;
+    return null;
   };
 
   const totalInvoices = invoices.length;
-  const totalAmount = invoices.reduce((sum, inv) => sum + inv.total, 0);
-  const paidAmount = invoices.filter(inv => inv.status === 'Paid').reduce((sum, inv) => sum + inv.total, 0);
-  const overdueCount = invoices.filter(inv => inv.status === 'Overdue').length;
-
-  const handleView = (invoice) => {
-    showCustomModal(
-      `Invoice: ${invoice.id}\nCustomer: ${invoice.customer}\nTotal: $${invoice.total.toFixed(2)}\nStatus: ${invoice.status}\nDate: ${invoice.date}\nDue: ${invoice.dueDate}`,
-      "info",
-      invoice
-    );
-  };
-
-  const handlePrint = (invoice) => {
-    showCustomModal(`Printing invoice ${invoice.id}`, "success", invoice);
-  };
-
-  const handleDownload = (invoice) => {
-    showCustomModal(`Downloading invoice ${invoice.id} as PDF`, "success", invoice);
-  };
-
-  const handleExport = () => {
-    showCustomModal("All invoices exported successfully!", "success");
-  };
-
-  const handleMarkPaid = (invoice) => {
-    showCustomModal(`Invoice ${invoice.id} marked as PAID`, "success", invoice);
-  };
+  const totalAmount = invoices.reduce((s, i) => s + i.total, 0);
+  const paidAmount = invoices.reduce((s, i) => s + i.amount_paid, 0);
+  const outstanding = totalAmount - paidAmount;
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      {/* Custom Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white max-w-md w-full p-6 border-2 border-blue-950/20">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
-                {modalType === "success" && <CheckCircle size={28} className="text-green-800" />}
-                {modalType === "error" && <AlertCircle size={28} className="text-red-800" />}
-                {modalType === "info" && <AlertCircle size={28} className="text-blue-950" />}
-                <h3 className="text-lg font-bold text-blue-950">
-                  {modalType === "success" ? "Success" : modalType === "error" ? "Error" : "Information"}
-                </h3>
-              </div>
-              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
-                <X size={24} />
-              </button>
-            </div>
-            <div className="mb-4">
-              <p className="text-gray-700 font-medium whitespace-pre-line">{modalMessage}</p>
-              {selectedInvoice && (
-                <div className="mt-3 bg-gray-50 p-3 border-l-4 border-blue-950">
-                  <p className="text-sm font-bold text-blue-950">Invoice: {selectedInvoice.id}</p>
-                  <p className="text-sm text-gray-600">Customer: {selectedInvoice.customer}</p>
-                  <p className="text-sm text-gray-600">Total: ${selectedInvoice.total.toFixed(2)}</p>
-                  <p className="text-sm text-gray-600">Status: {selectedInvoice.status}</p>
-                  <p className="text-sm text-gray-600">Due: {selectedInvoice.dueDate}</p>
-                </div>
-              )}
-            </div>
-            <button
-              onClick={closeModal}
-              className="w-full bg-blue-950 text-white py-2 font-bold hover:bg-blue-900 transition-colors border-2 border-blue-950"
-            >
-              OK
-            </button>
-          </div>
+    <div className="p-3 sm:p-4 md:p-6 bg-gray-50 min-h-screen">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 pb-4 border-b-2 border-blue-950/20">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-blue-950">All Invoices</h1>
+          <p className="text-gray-600 font-medium text-xs sm:text-sm">Manage and track all customer invoices</p>
+        </div>
+        <Link to="/invoices/create">
+          <button className="flex items-center gap-2 bg-blue-950 text-white px-3 py-2 font-bold hover:bg-blue-900 transition-colors border-2 border-blue-950 text-xs sm:text-sm">
+            <Plus size={16} /> Create Invoice
+          </button>
+        </Link>
+      </div>
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border-l-4 border-red-600 flex items-start gap-2">
+          <AlertCircle size={16} className="text-red-600 mt-0.5" />
+          <p className="text-xs text-red-800 font-bold">{error}</p>
         </div>
       )}
 
-      {/* Page Header */}
-      <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-blue-950/20">
-        <div>
-          <h1 className="text-2xl font-bold text-blue-950">All Invoices</h1>
-          <p className="text-gray-600 font-medium text-sm">Manage and track all customer invoices</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link to="/invoices/create">
-            <button className="flex items-center gap-2 bg-blue-950 text-white px-4 py-2 font-bold hover:bg-blue-900 transition-colors border-2 border-blue-950">
-              <Plus size={18} />
-              <span className="text-sm">Create Invoice</span>
-            </button>
-          </Link>
-          <button
-            onClick={handleExport}
-            className="flex items-center gap-2 bg-white border-2 border-blue-950/20 px-4 py-2 text-blue-950 font-bold hover:bg-gray-50 transition-colors"
-          >
-            <Download size={18} />
-            <span className="text-sm">Export</span>
-          </button>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        <Stat label="Total Invoices" value={totalInvoices} color="border-blue-950" />
+        <Stat label="Total Amount" value={`KSH ${totalAmount.toFixed(0)}`} color="border-blue-950" />
+        <Stat label="Paid" value={`KSH ${paidAmount.toFixed(0)}`} color="border-green-800" />
+        <Stat label="Outstanding" value={`KSH ${outstanding.toFixed(0)}`} color="border-red-800" />
+      </div>
+
+      <div className="bg-white p-3 sm:p-4 border-2 border-blue-950/10 shadow-sm mb-6">
+        <div className="flex items-center border-2 border-blue-950/10 px-3 py-1">
+          <Search size={18} className="text-gray-400" />
+          <input type="text" placeholder="Search by invoice number or customer..."
+            className="px-2 py-1 text-sm outline-none font-medium text-blue-950 w-full"
+            value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white p-4 border-l-4 border-blue-950 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-xs font-bold uppercase tracking-wider">Total Invoices</p>
-              <p className="text-2xl font-bold text-blue-950">{totalInvoices}</p>
-            </div>
-            <div className="bg-blue-950 p-2 border-2 border-white/20">
-              <FileText size={20} color="white" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-4 border-l-4 border-green-800 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-xs font-bold uppercase tracking-wider">Total Amount</p>
-              <p className="text-2xl font-bold text-green-800">${totalAmount.toFixed(2)}</p>
-            </div>
-            <div className="bg-green-800 p-2 border-2 border-white/20">
-              <DollarSign size={20} color="white" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-4 border-l-4 border-orange-600 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-xs font-bold uppercase tracking-wider">Paid</p>
-              <p className="text-2xl font-bold text-orange-600">${paidAmount.toFixed(2)}</p>
-            </div>
-            <div className="bg-orange-600 p-2 border-2 border-white/20">
-              <CheckCircle size={20} color="white" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-4 border-l-4 border-red-800 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-xs font-bold uppercase tracking-wider">Overdue</p>
-              <p className="text-2xl font-bold text-red-800">{overdueCount}</p>
-            </div>
-            <div className="bg-red-800 p-2 border-2 border-white/20">
-              <AlertCircle size={20} color="white" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-        <div className="bg-white p-5 border-2 border-blue-950/10 shadow-sm">
-          <h2 className="text-lg font-bold text-blue-950 mb-4">Invoice Status Distribution</h2>
-          <div className="h-52">
-            <Doughnut data={invoiceStatusData} options={doughnutOptions} />
-          </div>
-        </div>
-        <div className="bg-white p-5 border-2 border-blue-950/10 shadow-sm">
-          <h2 className="text-lg font-bold text-blue-950 mb-4">Invoice vs Paid Amount</h2>
-          <div className="h-52">
-            <Bar data={invoiceRevenueData} options={barOptions} />
-          </div>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white p-4 border-2 border-blue-950/10 shadow-sm mb-6">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center border-2 border-blue-950/10 px-3 py-1 flex-1 min-w-[200px]">
-            <Search size={18} className="text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Search by invoice number or customer..." 
-              className="px-2 py-1 text-sm outline-none font-medium text-blue-950 w-full"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <select className="border-2 border-blue-950/10 px-3 py-1 text-sm font-medium text-blue-950 outline-none bg-white">
-            <option>All Status</option>
-            <option>Paid</option>
-            <option>Unpaid</option>
-            <option>Pending</option>
-            <option>Overdue</option>
-          </select>
-          <select className="border-2 border-blue-950/10 px-3 py-1 text-sm font-medium text-blue-950 outline-none bg-white">
-            <option>All Payment</option>
-            <option>Cash</option>
-            <option>Card</option>
-            <option>Mobile</option>
-            <option>Bank</option>
-          </select>
-          <button className="flex items-center gap-1 bg-blue-950 text-white px-4 py-1 font-bold text-sm hover:bg-blue-900 transition-colors border-2 border-blue-950">
-            <Filter size={16} />
-            Apply
-          </button>
-        </div>
-      </div>
-
-      {/* Invoices Table */}
       <div className="bg-white border-2 border-blue-950/10 shadow-sm overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm min-w-[900px]">
           <thead>
             <tr className="border-b-2 border-blue-950/10 bg-gray-50">
-              <th className="text-left py-3 px-4 font-bold text-blue-950 text-xs uppercase tracking-wider">Invoice #</th>
-              <th className="text-left py-3 px-4 font-bold text-blue-950 text-xs uppercase tracking-wider">Customer</th>
-              <th className="text-center py-3 px-4 font-bold text-blue-950 text-xs uppercase tracking-wider">Items</th>
-              <th className="text-left py-3 px-4 font-bold text-blue-950 text-xs uppercase tracking-wider">Total</th>
-              <th className="text-left py-3 px-4 font-bold text-blue-950 text-xs uppercase tracking-wider">Payment</th>
-              <th className="text-left py-3 px-4 font-bold text-blue-950 text-xs uppercase tracking-wider">Status</th>
-              <th className="text-left py-3 px-4 font-bold text-blue-950 text-xs uppercase tracking-wider">Due Date</th>
-              <th className="text-left py-3 px-4 font-bold text-blue-950 text-xs uppercase tracking-wider">Actions</th>
+              <th className="text-left py-3 px-4 font-bold text-blue-950 text-xs uppercase">Invoice #</th>
+              <th className="text-left py-3 px-4 font-bold text-blue-950 text-xs uppercase">Customer</th>
+              <th className="text-center py-3 px-4 font-bold text-blue-950 text-xs uppercase">Items</th>
+              <th className="text-right py-3 px-4 font-bold text-blue-950 text-xs uppercase">Total</th>
+              <th className="text-right py-3 px-4 font-bold text-blue-950 text-xs uppercase">Balance</th>
+              <th className="text-left py-3 px-4 font-bold text-blue-950 text-xs uppercase">Status</th>
+              <th className="text-left py-3 px-4 font-bold text-blue-950 text-xs uppercase">Due</th>
+              <th className="text-left py-3 px-4 font-bold text-blue-950 text-xs uppercase">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {invoices.map((invoice) => (
-              <tr key={invoice.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                <td className="py-3 px-4 font-bold text-blue-950">{invoice.id}</td>
-                <td className="py-3 px-4 text-gray-700 font-medium">{invoice.customer}</td>
-                <td className="py-3 px-4 text-center text-gray-600 font-medium">{invoice.items}</td>
-                <td className="py-3 px-4 font-bold text-blue-950">${invoice.total.toFixed(2)}</td>
-                <td className="py-3 px-4 text-gray-600 font-medium">{invoice.paymentMethod}</td>
+            {loading && (
+              <tr><td colSpan="8" className="py-8 text-center text-gray-500 font-medium">
+                <Loader2 size={20} className="animate-spin inline mr-2" /> Loading…
+              </td></tr>
+            )}
+            {!loading && invoices.length === 0 && (
+              <tr><td colSpan="8" className="py-8 text-center text-gray-500 font-medium">
+                No invoices yet.
+              </td></tr>
+            )}
+            {!loading && invoices.map(inv => (
+              <tr key={inv.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                <td className="py-3 px-4 font-bold text-blue-950">{inv.invoice_no}</td>
+                <td className="py-3 px-4 text-gray-700 font-medium">{inv.customer_name || "—"}</td>
+                <td className="py-3 px-4 text-center text-gray-600">{inv.items.length}</td>
+                <td className="py-3 px-4 text-right font-bold text-blue-950">KSH {inv.total.toFixed(2)}</td>
+                <td className="py-3 px-4 text-right font-bold text-orange-600">KSH {inv.balance.toFixed(2)}</td>
                 <td className="py-3 px-4">
-                  <span className={`px-2 py-1 text-xs font-bold flex items-center gap-1 ${getStatusColor(invoice.status)}`}>
-                    {getStatusIcon(invoice.status)}
-                    {invoice.status}
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-bold whitespace-nowrap ${getStatusColor(inv.status)}`}>
+                    {getStatusIcon(inv.status)} {inv.status}
                   </span>
                 </td>
-                <td className="py-3 px-4 text-gray-600 font-medium">{invoice.dueDate}</td>
+                <td className="py-3 px-4 text-gray-600 text-xs">{inv.due_date || "—"}</td>
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleView(invoice)}
-                      className="text-blue-950 hover:text-blue-700 transition-colors"
-                    >
+                    <button onClick={() => openDetail(inv)} className="text-blue-950 hover:text-blue-700">
                       <Eye size={16} />
                     </button>
-                    <button
-                      onClick={() => handlePrint(invoice)}
-                      className="text-gray-600 hover:text-gray-800 transition-colors"
-                    >
-                      <Printer size={16} />
-                    </button>
-                    <button
-                      onClick={() => handleDownload(invoice)}
-                      className="text-blue-950 hover:text-blue-700 transition-colors"
-                    >
-                      <Download size={16} />
-                    </button>
-                    {invoice.status !== 'Paid' && (
-                      <button
-                        onClick={() => handleMarkPaid(invoice)}
-                        className="text-green-800 hover:text-green-900 transition-colors text-xs font-bold"
-                      >
-                        Mark Paid
+                    {inv.balance > 0 && (
+                      <button onClick={() => openPay(inv)}
+                        className="text-green-800 hover:text-green-900 text-xs font-bold">Pay</button>
+                    )}
+                    {inv.amount_paid === 0 && (
+                      <button onClick={() => setConfirmDelete(inv)} className="text-red-800 hover:text-red-900">
+                        <Trash2 size={16} />
                       </button>
                     )}
                   </div>
@@ -419,8 +203,128 @@ const AllInvoices = () => {
           </tbody>
         </table>
       </div>
+
+      {detail && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] px-4 py-6 overflow-y-auto">
+          <div className="bg-white shadow-2xl w-full max-w-lg my-6 border-t-4 border-orange-500">
+            <div className="flex items-center justify-between p-5 border-b-2 border-blue-950/10">
+              <h2 className="text-lg font-bold text-blue-950">Invoice {detail.invoice_no}</h2>
+              <button onClick={() => setDetail(null)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+            </div>
+            <div className="p-5 max-h-[70vh] overflow-y-auto">
+              <div className="text-xs space-y-1 mb-3">
+                <Row label="Customer" value={detail.customer_name || "—"} />
+                <Row label="Issue Date" value={detail.issue_date} />
+                <Row label="Due Date" value={detail.due_date || "—"} />
+                <Row label="Status" value={detail.status} />
+              </div>
+              <div className="border-t-2 border-dashed border-gray-300 py-3">
+                <p className="text-[10px] font-bold text-blue-950 uppercase mb-2">Items</p>
+                {detail.items.map((it, i) => (
+                  <div key={i} className="flex justify-between text-xs py-1 border-b border-gray-100">
+                    <div>
+                      <p className="font-bold text-blue-950">{it.description}</p>
+                      <p className="text-[10px] text-gray-500">{it.quantity} × {it.unit_price.toFixed(2)}</p>
+                    </div>
+                    <span className="font-bold text-blue-950">KSH {it.line_total.toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-1 text-xs border-t-2 border-dashed border-gray-300 pt-3">
+                <Row label="Subtotal" value={`KSH ${detail.subtotal.toFixed(2)}`} />
+                {detail.discount_amount > 0 && (
+                  <Row label="Discount" value={`-KSH ${detail.discount_amount.toFixed(2)}`} />
+                )}
+                <div className="flex justify-between font-bold text-sm border-t pt-1 mt-1">
+                  <span>Total</span>
+                  <span>KSH {detail.total.toFixed(2)}</span>
+                </div>
+                <Row label="Paid" value={`KSH ${detail.amount_paid.toFixed(2)}`} />
+                <Row label="Balance" value={`KSH ${detail.balance.toFixed(2)}`} />
+              </div>
+              {detail.payments.length > 0 && (
+                <div className="mt-3 border-t-2 border-dashed border-gray-300 pt-3">
+                  <p className="text-[10px] font-bold text-blue-950 uppercase mb-2">Payments</p>
+                  {detail.payments.map((p, i) => (
+                    <div key={i} className="flex justify-between text-xs py-1">
+                      <span className="text-gray-600">{p.method} · {p.reference || "—"}</span>
+                      <span className="font-bold text-green-800">KSH {p.amount.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {payModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] px-4">
+          <div className="bg-white border-t-4 border-orange-500 shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between p-5 border-b-2 border-blue-950/10">
+              <h2 className="text-lg font-bold text-blue-950">Add Payment</h2>
+              <button onClick={() => setPayModal(null)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="bg-blue-950 p-3 text-center">
+                <p className="text-xs text-orange-200 font-bold uppercase">Balance Due</p>
+                <p className="text-2xl font-bold text-white">KSH {payModal.balance.toFixed(2)}</p>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-blue-950 uppercase tracking-wider mb-1">Amount *</label>
+                <input type="number" step="0.01" value={payAmount}
+                  onChange={(e) => setPayAmount(e.target.value)}
+                  className="w-full border-2 border-blue-950/10 px-3 py-2 text-lg font-bold text-blue-950 outline-none focus:border-blue-950" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-blue-950 uppercase tracking-wider mb-1">Method</label>
+                <select value={payMethod} onChange={(e) => setPayMethod(e.target.value)}
+                  className="w-full border-2 border-blue-950/10 px-3 py-2 text-sm font-medium text-blue-950 outline-none bg-white">
+                  <option value="cash">Cash</option>
+                  <option value="mobile">M-Pesa</option>
+                  <option value="card">Card</option>
+                  <option value="bank">Bank</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-blue-950 uppercase tracking-wider mb-1">Reference</label>
+                <input type="text" value={payRef} onChange={(e) => setPayRef(e.target.value)}
+                  className="w-full border-2 border-blue-950/10 px-3 py-2 text-sm font-medium text-blue-950 outline-none focus:border-blue-950"
+                  placeholder="Optional" />
+              </div>
+              <div className="flex gap-2 pt-3 border-t-2 border-blue-950/10">
+                <button onClick={() => setPayModal(null)}
+                  className="flex-1 border-2 border-blue-950/20 text-blue-950 py-3 font-bold text-xs uppercase">Cancel</button>
+                <button onClick={submitPay} disabled={paying}
+                  className="flex-1 bg-green-800 text-white py-3 font-bold text-xs uppercase flex items-center justify-center gap-2 disabled:opacity-60">
+                  {paying ? <><Loader2 size={16} className="animate-spin" /> Saving…</> : "Add Payment"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmModal open={!!confirmDelete} title="Delete Invoice"
+        message={`Delete ${confirmDelete?.invoice_no}? This cannot be undone.`}
+        confirmLabel="Delete" onConfirm={deleteNow}
+        onCancel={() => setConfirmDelete(null)} />
     </div>
   );
 };
+
+const Stat = ({ label, value, color }) => (
+  <div className={`bg-white p-4 border-l-4 ${color} shadow-sm`}>
+    <p className="text-gray-600 text-[10px] sm:text-xs font-bold uppercase tracking-wider">{label}</p>
+    <p className="text-lg sm:text-xl font-bold text-blue-950">{value}</p>
+  </div>
+);
+
+const Row = ({ label, value }) => (
+  <div className="flex justify-between">
+    <span className="text-gray-600 font-bold">{label}</span>
+    <span className="font-bold text-blue-950 capitalize">{value || "—"}</span>
+  </div>
+);
 
 export default AllInvoices;

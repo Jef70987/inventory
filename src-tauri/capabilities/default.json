@@ -7,7 +7,13 @@
   ],
   "permissions": [
     "core:default",
-    "sql:default",
-    "sql:allow-execute"
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "dialog:default",
+    "fs:allow-write-file",
+    "fs:allow-write-text-file",
+    "fs:default",
+    "sql:allow-execute",
+    "sql:default"
   ]
 }

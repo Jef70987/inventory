@@ -1,7 +1,10 @@
 mod auth;
 mod customers;
+mod invoices;
 mod lookups;
 mod products;
+mod purchases;
+mod reports;
 mod sales;
 mod shop;
 mod stock;
@@ -30,6 +33,8 @@ pub fn run() {
     ];
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .plugin(
             Builder::default()
                 .add_migrations("sqlite:inventory.db", migrations)
@@ -51,6 +56,7 @@ pub fn run() {
                         }
                         warehouses::ensure_default_warehouse(&pool).await;
                         warehouses::ensure_store_settings(&pool).await;
+                        invoices::ensure_invoice_settings(&pool).await;
                         handle.manage(pool);
                     }
                     Err(e) => eprintln!("Failed to open DB pool: {}", e),
@@ -112,6 +118,28 @@ pub fn run() {
             products::get_product,
             products::update_product,
             products::delete_product,
+            purchases::create_purchase_order,
+            purchases::list_purchase_orders,
+            purchases::get_purchase_order,
+            purchases::update_po_status,
+            purchases::delete_purchase_order,
+            purchases::receive_purchase_order,
+            invoices::create_invoice,
+            invoices::list_invoices,
+            invoices::get_invoice,
+            invoices::update_invoice_status,
+            invoices::add_invoice_payment,
+            invoices::delete_invoice,
+            invoices::get_invoice_settings,
+            invoices::save_invoice_settings,
+            reports::report_daily_sales,
+            reports::report_top_products,
+            reports::report_profit_margin,
+            reports::report_sales_summary,
+            reports::report_period,
+            reports::report_revenue_tracking,
+            reports::report_supplier_performance,
+            reports::report_dashboard,
             // Warehouses
             warehouses::create_warehouse,
             warehouses::list_warehouses,
@@ -129,6 +157,7 @@ pub fn run() {
             sales::preview_next_receipt,
             sales::complete_sale,
             sales::list_sales,
+            sales::list_sales_for_return,
             sales::get_sale,
             sales::create_return,
             sales::list_returns,
