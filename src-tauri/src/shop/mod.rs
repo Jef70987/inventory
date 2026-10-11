@@ -64,9 +64,17 @@ pub async fn get_shop_config(
 pub async fn check_setup_complete(
     pool: tauri::State<'_, SqlitePool>,
 ) -> Result<bool, String> {
-    let shop_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM shop_config")
-        .fetch_one(&*pool).await.map_err(|e| e.to_string())?;
-    let user_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users")
-        .fetch_one(&*pool).await.map_err(|e| e.to_string())?;
+    // If the tables don't exist yet (fresh install before migrations finish),
+    // treat as "not set up" instead of erroring out.
+    let shop_count: i64 = match sqlx::query_scalar("SELECT COUNT(*) FROM shop_config")
+        .fetch_one(&*pool).await {
+        Ok(n) => n,
+        Err(_) => return Ok(false),
+    };
+    let user_count: i64 = match sqlx::query_scalar("SELECT COUNT(*) FROM users")
+        .fetch_one(&*pool).await {
+        Ok(n) => n,
+        Err(_) => return Ok(false),
+    };
     Ok(shop_count > 0 && user_count > 0)
 }

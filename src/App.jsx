@@ -60,7 +60,16 @@ function BootGuard({ children }) {
 
     (async () => {
       try {
-        const setupDone = await invoke("check_setup_complete");
+        // Retry up to 10 times — migrations may still be running on first launch
+        let setupDone = false;
+        for (let i = 0; i < 10; i++) {
+          try {
+            setupDone = await invoke("check_setup_complete");
+            if (setupDone) break;
+          } catch {}
+          await new Promise((r) => setTimeout(r, 500));
+        }
+
         if (!setupDone) {
           navigate("/auth/setup", { replace: true });
         } else {
