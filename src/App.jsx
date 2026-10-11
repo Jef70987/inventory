@@ -62,10 +62,10 @@ function BootGuard({ children }) {
       try {
         // Retry up to 10 times — migrations may still be running on first launch
         let setupDone = false;
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 120; i++) {
           try {
             setupDone = await invoke("check_setup_complete");
-            if (setupDone) break;
+            break;
           } catch {}
           await new Promise((r) => setTimeout(r, 500));
         }

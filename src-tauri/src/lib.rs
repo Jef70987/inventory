@@ -43,24 +43,35 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                tokio::time::sleep(std::time::Duration::from_millis(800)).await;
-
                 let db_path = dirs_db_path(&handle);
                 let url = format!("sqlite:{}?mode=rwc", db_path);
-                match SqlitePool::connect(&url).await {
-                    Ok(pool) => {
-                        if let Err(e) = auth::seed_defaults(&pool).await {
-                            eprintln!("Seed failed: {}", e);
-                        } else {
-                            println!("✅ Seed defaults completed");
+
+                let pool = loop {
+                    match SqlitePool::connect(&url).await {
+                        Ok(p) => break p,
+                        Err(e) => {
+                            eprintln!("DB connect retry: {}", e);
+                            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                         }
-                        warehouses::ensure_default_warehouse(&pool).await;
-                        warehouses::ensure_store_settings(&pool).await;
-                        invoices::ensure_invoice_settings(&pool).await;
-                        handle.manage(pool);
                     }
-                    Err(e) => eprintln!("Failed to open DB pool: {}", e),
+                };
+
+                // Wait until migrations have created the core tables
+                for _ in 0..120 {
+                    let ok: Result<i64, _> = sqlx::query_scalar("SELECT COUNT(*) FROM users").fetch_one(&pool).await;
+                    if ok.is_ok() { break; }
+                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                 }
+
+                if let Err(e) = auth::seed_defaults(&pool).await {
+                    eprintln!("Seed failed: {}", e);
+                } else {
+                    println!("Seed defaults completed");
+                }
+                warehouses::ensure_default_warehouse(&pool).await;
+                warehouses::ensure_store_settings(&pool).await;
+                invoices::ensure_invoice_settings(&pool).await;
+                handle.manage(pool);
             });
             Ok(())
         })
