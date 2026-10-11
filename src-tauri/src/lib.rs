@@ -56,8 +56,26 @@ pub fn run() {
                     }
                 };
 
-                // Wait until migrations have created the core tables
-                for _ in 0..120 {
+                // Run migrations manually — no plugin dependency
+                let migrations: [&str; 6] = [
+                    include_str!("../db/01_auth.sql"),
+                    include_str!("../db/02_shop_license.sql"),
+                    include_str!("../db/03_products_customers.sql"),
+                    include_str!("../db/04_sales_invoices_notifications.sql"),
+                    include_str!("../db/05_accounting.sql"),
+                    include_str!("../db/06_logs_recurring.sql"),
+                ];
+
+                for (idx, sql) in migrations.iter().enumerate() {
+                    if let Err(e) = sqlx::raw_sql(sql).execute(&pool).await {
+                        eprintln!("Migration {} failed: {}", idx + 1, e);
+                    } else {
+                        println!("Migration {} OK", idx + 1);
+                    }
+                }
+
+                // Verify the users table exists
+                for _ in 0..40 {
                     let ok: Result<i64, _> = sqlx::query_scalar("SELECT COUNT(*) FROM users").fetch_one(&pool).await;
                     if ok.is_ok() { break; }
                     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
