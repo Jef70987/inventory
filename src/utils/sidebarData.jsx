@@ -119,6 +119,11 @@ export const sidebarData = [
     ]
   },
   {
+    title: "Help",
+    icon: "BookOpen",
+    link: "/help/manual"
+  },
+  {
     title: "Logout",
     icon: "LogOut",
     link: "/auth/logout"

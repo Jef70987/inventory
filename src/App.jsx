@@ -47,6 +47,7 @@ import Groups from "./pages/users/Groups";
 import Permissions from "./pages/users/Permissions";
 import AuditTrail from "./pages/users/AuditTrail";
 import EditUser from "./pages/users/EditUser";
+import UserManual from "./pages/help/UserManual";
 
 function BootGuard({ children }) {
   const navigate = useNavigate();
@@ -164,6 +165,7 @@ function AppShell() {
             <Route path="/users/permissions" element={<Permissions />} />
             <Route path="/users/audit-trail" element={<AuditTrail />} />
             <Route path="/users/edit/:id" element={<EditUser />} />
+            <Route path="/help/manual" element={<UserManual />} />
             <Route path="*" element={<Dashboard />} />
           </Routes>
         </main>
